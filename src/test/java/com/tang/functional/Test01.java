@@ -21,8 +21,8 @@ public class Test01 {
     void testBuyDonuts() {
         CreditCard creditCard = new CreditCard();
         Tuple<List<Donut>, Payment> purchase = DonutShop.buyDonuts(5, creditCard);
-        assertEquals(Donut.price * 5, purchase._2().amount());
-        assertEquals(creditCard, purchase._2().creditCard());
+        assertEquals(Donut.price * 5, purchase.get_2().amount());
+        assertEquals(creditCard, purchase.get_2().creditCard());
 
         List<String> fill = List.fill(3, String::new);
 
