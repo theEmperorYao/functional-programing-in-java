@@ -1,13 +1,12 @@
 package com.tang.functional.chap3;
 
 
+import com.tang.functional.fpinjava.common.Executable;
 import com.tang.functional.fpinjava.common.Function;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
 
 /**
  * @Title: CollectionUtilities
@@ -58,7 +57,7 @@ public class CollectionUtilities {
     public static <T> List<T> append(List<T> list, T t) {
         List<T> ts = copy(list);
         ts.add(t);
-        System.out.println("ts = " + ts);
+//        System.out.println("ts = " + ts);
         return Collections.unmodifiableList(ts);
     }
 
@@ -88,9 +87,9 @@ public class CollectionUtilities {
     }
 
     public static <T, U> U foldRight2(List<T> ts, U identity, Function<T, Function<U, U>> f) {
-
-        return ts.isEmpty() ? identity : f.apply(head(ts)).apply(foldRight2(tail(ts), identity, f));
-
+        return ts.isEmpty()
+                ? identity
+                : f.apply(head(ts)).apply(foldRight2(tail(ts), identity, f));
     }
 
     //    public static <T> List<T> reverse(List<T> list) {
@@ -106,10 +105,13 @@ public class CollectionUtilities {
         int b;
     }
 
+    /**
+     * (U,T)->U
+     */
     public static <T, U> U foldLeft(List<T> list, U identity, Function<U, Function<T, U>> f) {
         U result = identity;
         for (T t : list) {
-            result = f.apply(identity).apply(t);
+            result = f.apply(result).apply(t);
         }
         return result;
     }
@@ -130,19 +132,106 @@ public class CollectionUtilities {
         return foldLeft(list, list(), x -> y -> prepend(y, x));
     }
 
+    public static <T, U> List<U> mapViaFoldLeft(List<T> list, Function<T, U> f) {
+        return foldLeft(list, list(), x -> y -> append(x, f.apply(y)));
+    }
+
+    public static <T, U> List<U> mapViaFoldRight(List<T> list, Function<T, U> f) {
+        return foldRight(list, list(), x -> y -> prepend(f.apply(x), y));
+    }
+
+    public static <T, U> List<U> map(List<T> list, Function<T, U> f) {
+        return mapViaFoldLeft(list, f);
+    }
+
+    public static <T> void forEach(Collection<T> ts, Effect<T> e) {
+        for (T t : ts) {
+            e.apply(t);
+        }
+    }
+
+    static Function<Executable, Function<Executable, Executable>> compose =
+            x -> y -> () -> {
+                x.exec();
+                y.exec();
+            };
+
 
     public static void main(String[] args) {
+
+//        test00();
 //        test01();
+//        test02();
+//        test04();
+//        test05();
 
+    }
 
-        List<Integer> list = List.of(1, 2, 3, 4, 5);
-//        List<Integer> prepend = prepend(5, list);
+    private static void test05() {
+        Function<Double, Double> addTax = x -> x * 1.09;
+        Function<Double, Double> addShipping = x -> x + 3.50;
+        List<Double> prices = list(10.10, 23.45, 32.07, 9.23);
+        List<Double> pricesIncludingTax = map(prices, addTax);
+        List<Double> pricesIncludingShipping = map(pricesIncludingTax, addShipping);
+        System.out.println("pricesIncludingShipping = " + pricesIncludingShipping);
+        System.out.println(map(map(prices, addTax), addShipping));
+
+        System.out.println(map(prices, addShipping.compose(addTax)));
+        System.out.println(map(prices, addTax.andThen(addShipping)));
+
+        for (Double price : pricesIncludingShipping) {
+            System.out.printf("%.2f", price);
+            System.out.println();
+        }
+
+        Effect<Double> printWith2decimals = x -> {
+            System.out.printf("%.2f", x);
+            System.out.println();
+        };
+
+        forEach(pricesIncludingShipping, printWith2decimals);
+        Executable ez = () -> {
+            System.out.println("初始值");
+        };
+
+        Executable program = foldLeft(
+                pricesIncludingShipping,
+                ez,
+                e -> d -> compose.apply(e).apply(() -> printWith2decimals.apply(d)));
+
+        program.exec();
+    }
+
+    private static void test04() {
+        List<String> list = List.of("a", "b", "C", "D", "E");
+        List<String> list1 = mapViaFoldLeft(list, String::toUpperCase);
+        System.out.println("list1 = " + list1);
+        List<String> list2 = mapViaFoldRight(list, String::toLowerCase);
+        System.out.println("list2 = " + list2);
+    }
+
+    private static void test02() {
+        //        List<Integer> list = List.of(1, 2, 3, 4, 5);
+        List<String> list = List.of("a", "b", "c", "d", "e");
+//        List<Integer> prepend = prepend(6, list);
 //        System.out.println("prepend = " + prepend);
-//
-//        List<Integer> reverse = reverse(list);
-//        System.out.println("reverse = " + reverse);
+
+        List<String> reverse = reverse(list);
+        System.out.println("reverse = " + reverse);
+    }
+
+    private static void test00() {
+        List<Integer> integers = Arrays.asList(2, 3, 5);
+
+        Function<String, Function<Integer, String>> stringFunctionFunction = a -> b -> "(" + a + "+" + b + ")";
+        String s1 = foldLeft(integers, "0", stringFunctionFunction);
+        System.out.println("s1 = " + s1);
 
 
+        // Function<U, Function<T, U>> f
+        Function<Integer, Function<String, String>> f = a -> b -> "(" + a + "+" + b + ")";
+        String s = foldRight(integers, "0", f);
+        System.out.println("s = " + s);
     }
 
     private static void test01() {
