@@ -157,17 +157,59 @@ public class CollectionUtilities {
             };
 
 
+    public static List<Integer> range0(int start, int end) {
+        List<Integer> result = new ArrayList<>();
+        int temp = start;
+        while (temp < end) {
+            result = append(result, temp);
+            temp = temp + 1;
+        }
+        return result;
+    }
+
+    public static <T> List<T> unfold(T seed, Function<T, T> f, Function<T, Boolean> p) {
+        List<T> result = new ArrayList<>();
+        T temp = seed;
+        while (p.apply(temp)) {
+            result = append(result, temp);
+            temp = f.apply(temp);
+        }
+        return result;
+    }
+
+    public static List<Integer> range(int start, int end) {
+        return unfold(start, x -> x + 1, x -> x < end);
+    }
+
+    public static List<Integer> range2(int start, int end) {
+        return end <= start
+                ? list()
+                : prepend(start, range2(start + 1, end));
+    }
+
     public static void main(String[] args) {
 
 //        test00();
 //        test01();
 //        test02();
+//        test03();
 //        test04();
 //        test05();
+
 
     }
 
     private static void test05() {
+        // 与for循环不等价，for循环是惰性的，赋值顺序是索引，计算，索引，计算 ....,使用range会提前计算出完整的列表
+        range(0, 5).forEach(System.out::println);
+        range0(6, 10).forEach(System.out::println);
+        range2(11, 23).forEach(System.out::println);
+
+        List<Integer> list = mapViaFoldLeft(range(0, 5), x -> x * x);
+        System.out.println("list = " + list);
+    }
+
+    private static void test04() {
         Function<Double, Double> addTax = x -> x * 1.09;
         Function<Double, Double> addShipping = x -> x + 3.50;
         List<Double> prices = list(10.10, 23.45, 32.07, 9.23);
@@ -200,9 +242,15 @@ public class CollectionUtilities {
                 e -> d -> compose.apply(e).apply(() -> printWith2decimals.apply(d)));
 
         program.exec();
+
+
+        Executable executable = foldLeft(pricesIncludingShipping, ez,
+                e -> d -> compose.apply(e).apply(() -> printWith2decimals.apply(d)));
+        executable.exec();
+
     }
 
-    private static void test04() {
+    private static void test03() {
         List<String> list = List.of("a", "b", "C", "D", "E");
         List<String> list1 = mapViaFoldLeft(list, String::toUpperCase);
         System.out.println("list1 = " + list1);
